@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import jwt, { Jwt } from "jsonwebtoken";
 import { AppError } from "./errorHandler.js";
+import { UserRole } from "@prisma/client";
 
 interface JwtPayload {
   id: string;
   email: string;
+  role: UserRole;
 }
 
 declare global {
@@ -31,6 +33,9 @@ export const authenticate = (
       token,
       process.env.JWT_SECRET || "supersekreto",
     ) as JwtPayload;
+
+    req.user = decoded; // Attach user to request
+    next(); // Call next middleware
   } catch (error) {
     next(new AppError(401, "Invalid or expired token"));
   }
