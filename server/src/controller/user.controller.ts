@@ -55,6 +55,54 @@ export class UserController {
     }
   }
 
+  async updateUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+
+      if (req.user?.id !== id && req.user?.role !== "ADMIN") {
+        throw new AppError(403, "Forbidden");
+      }
+
+      const updatedUser = await this.userService.updateUser(
+        id as string,
+        updateData,
+      );
+      res.status(200).json({
+        status: "success",
+        message: "User updated successfully",
+        data: { user: updatedUser },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deleteUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+
+      // Optional: Authorization check
+      // Prevent users from deleting their own account (or allow only admins)
+      if (req.user?.id === id) {
+        throw new AppError(400, "Cannot delete your own account");
+      }
+
+      if (req.user?.role !== "ADMIN") {
+        throw new AppError(403, "Forbidden: Only admins can delete users");
+      }
+
+      const result = await this.userService.deleteUser(id as string);
+
+      res.status(200).json({
+        status: "success",
+        message: result.message,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getProfile(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.user?.id;
