@@ -9,6 +9,8 @@ import {
   updateProductSchema,
   listProductsQuerySchema,
   uuidParamSchema,
+  adjustStockSchema,
+  listProductTransactionsSchema,
 } from "../utils/inventory.schema.js";
 import { AppError } from "../middleware/errorHandler.js";
 
@@ -71,6 +73,22 @@ router.patch(
   authorizeRoles("ADMIN", "MANAGER"),
   validateRequest(updateProductSchema),
   inventoryController.updateProduct.bind(inventoryController),
+);
+
+router.post(
+  "/products/:id/adjust-stock",
+  authenticate,
+  authorizeRoles("ADMIN", "MANAGER"),
+  validateRequest(adjustStockSchema),
+  inventoryController.adjustStock.bind(inventoryController),
+);
+
+// View product stock history (authenticated)
+router.get(
+  "/products/:id/transactions",
+  authenticate,
+  validateRequest(listProductTransactionsSchema),
+  inventoryController.getProductTransactions.bind(inventoryController),
 );
 
 export default router;

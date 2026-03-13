@@ -1,5 +1,6 @@
 import prisma from "../utils/prisma.js";
 import { AppError } from "../middleware/errorHandler.js";
+import { Prisma, InventoryTransactionType } from "@prisma/client";
 
 export class InventoryService {
   async createCategory(data: { name: string; description?: string }) {
@@ -165,5 +166,90 @@ export class InventoryService {
     });
 
     return { ...updated, isLowStock: updated.quantity <= updated.reorderLevel };
+  }
+
+  async adjustStock(
+    productId: string,
+    data: { type: InventoryTransactionType; quantity: number; reason: string },
+    actorId?: string,
+  ) {
+    // Use DB transaction so product update + transaction log are always in sync.
+    return prisma.$transaction(async (tx) => {
+      const product = await tx.product.findUnique({ where: { id: productId } });
+
+      if (!product) {
+        throw new AppError(404, "Product not found");
+      }
+
+      const previousQty = product.quantity;
+
+      let delta = 0;
+      if (data.type === "STOCK_IN") delta = data.quantity; // add stock
+      if (data.type === "STOCK_OUT") delta = -data.quantity; // subtract stock
+      if (data.type === "ADJUSTMENT") delta = data.quantity; // signed adjustment
+
+      const newQty = previousQty + delta;
+
+      // Prevent negative inventory
+      if (newQty < 0) {
+        throw new AppError(400, "Insufficient stock");
+      }
+
+      const updatedProduct = await tx.product.update({
+        where: { id: productId },
+        data: { quantity: newQty },
+        include: { category: true },
+      });
+
+      const log = await tx.inventoryTransaction.create({
+        data: {
+          productId,
+          type: data.type,
+          quantity: data.quantity,
+          reason: data.reason,
+          previousQty,
+          newQty,
+          createdBy: actorId ?? null,
+        },
+      });
+
+      return {
+        product: {
+          ...updatedProduct,
+          isLowStock: updatedProduct.quantity <= updatedProduct.reorderLevel,
+        },
+        transaction: log,
+      };
+    });
+  }
+
+  async getProductTransactions(
+    productId: string,
+    query: { page?: number; limit?: number; type?: InventoryTransactionType },
+  ) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    // Optional type filter + required product filter
+    const where: Prisma.InventoryTransactionWhereInput = {
+      productId,
+      ...(query.type ? { type: query.type } : {}),
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.inventoryTransaction.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.inventoryTransaction.count({ where }),
+    ]);
+
+    return {
+      items,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
   }
 }
