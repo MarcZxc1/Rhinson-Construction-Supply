@@ -8,6 +8,7 @@ import {
   changePasswordSchema,
   getUserByIdSchema,
 } from "../utils/zodSchema.js";
+import { authenticate } from "../middleware/jwt.middleware.js";
 
 const router = Router();
 const userController = new UserController();
@@ -24,17 +25,25 @@ router.post(
   userController.login.bind(userController),
 );
 
-// Protected routes (add auth middleware later)
-// router.get("/profile", userController.getProfile.bind(userController));
-// router.get(
-//   "/:id",
-//   validateRequest(getUserByIdSchema),
-//   userController.getUserById.bind(userController),
-// );
-// router.patch(
-//   "/:id",
-//   validateRequest(updateUserSchema),
-//   userController.updateUser.bind(userController),
-// );
+// Protected routes
+router.get(
+  "/profile",
+  authenticate, // Add authentication
+  userController.getProfile.bind(userController),
+);
+
+router.patch(
+  "/:id",
+  authenticate, // Require authentication
+  validateRequest(updateUserSchema),
+  userController.updateUser.bind(userController),
+);
+
+router.delete(
+  "/:id",
+  authenticate, // Require authentication
+  validateRequest(getUserByIdSchema),
+  userController.deleteUser.bind(userController),
+);
 
 export default router;
