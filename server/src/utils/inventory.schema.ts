@@ -56,3 +56,57 @@ export const listProductsQuerySchema = z.object({
     categoryId: z.string().uuid().optional(),
   }),
 });
+
+// Shared UUID param schema
+export const productIdParamSchema = z.object({
+  params: z.object({
+    id: z.string().uuid("Invalid product ID"),
+  }),
+});
+
+// POST /products/:id/adjust-stock
+export const adjustStockSchema = z.object({
+  params: z.object({
+    id: z.string().uuid("Invalid product ID"),
+  }),
+  body: z
+    .object({
+      type: z.enum(["STOCK_IN", "STOCK_OUT", "ADJUSTMENT"]),
+      // STOCK_IN/STOCK_OUT => must be > 0
+      // ADJUSTMENT => can be positive or negative, but not zero
+      quantity: z.number().int(),
+      reason: z.string().min(3, "Reason is required"),
+    })
+    .superRefine((data, ctx) => {
+      if (
+        (data.type === "STOCK_IN" || data.type === "STOCK_OUT") &&
+        data.quantity <= 0
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Quantity must be greater than 0 for STOCK_IN/STOCK_OUT",
+          path: ["quantity"],
+        });
+      }
+
+      if (data.type === "ADJUSTMENT" && data.quantity === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Quantity cannot be 0 for ADJUSTMENT",
+          path: ["quantity"],
+        });
+      }
+    }),
+});
+
+// GET /products/:id/transactions?page=1&limit=20&type=STOCK_OUT
+export const listProductTransactionsSchema = z.object({
+  params: z.object({
+    id: z.string().uuid("Invalid product ID"),
+  }),
+  query: z.object({
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+    type: z.enum(["STOCK_IN", "STOCK_OUT", "ADJUSTMENT"]).optional(),
+  }),
+});

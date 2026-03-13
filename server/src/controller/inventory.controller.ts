@@ -7,6 +7,7 @@ import {
   UpdateProductInput,
   ProductListQuery,
 } from "../types/inventory.types.js";
+import { InventoryTransactionType } from "@prisma/client";
 
 export class InventoryController {
   private inventoryService: InventoryService;
@@ -141,6 +142,64 @@ export class InventoryController {
         status: "success",
         message: "Product updated successfully",
         data: { product },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+  async adjustStock(req: Request, res: Response, next: NextFunction) {
+    try {
+      const rawId = req.params.id;
+      const id = Array.isArray(rawId) ? rawId[0] : rawId;
+      if (!id) throw new AppError(400, "Invalid product ID");
+
+      const { type, quantity, reason } = req.body as {
+        type: InventoryTransactionType;
+        quantity: number;
+        reason: string;
+      };
+
+      const result = await this.inventoryService.adjustStock(
+        id,
+        { type, quantity, reason },
+        req.user?.id, // track who made the adjustment
+      );
+
+      res.status(200).json({
+        status: "success",
+        message: "Stock adjusted successfully",
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getProductTransactions(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const rawId = req.params.id;
+      const id = Array.isArray(rawId) ? rawId[0] : rawId;
+      if (!id) throw new AppError(400, "Invalid product ID");
+
+      const page = req.query.page ? Number(req.query.page) : undefined;
+      const limit = req.query.limit ? Number(req.query.limit) : undefined;
+      const type = req.query.type
+        ? (String(req.query.type) as InventoryTransactionType)
+        : undefined;
+
+      const result = await this.inventoryService.getProductTransactions(id, {
+        page,
+        limit,
+        type,
+      });
+
+      res.status(200).json({
+        status: "success",
+        data: result,
       });
     } catch (error) {
       next(error);

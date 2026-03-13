@@ -36,6 +36,12 @@ enum DeliveryStatus {
   DELIVERED
 }
 
+enum InventoryTransactionType {
+  STOCK_IN
+  STOCK_OUT
+  ADJUSTMENT
+}
+
 // --- MODELS ---
 
 model Category {
@@ -51,7 +57,7 @@ model Category {
 model Product {
   id            String      @id @default(uuid())
   name          String      @map("product_name")
-  specification String?     // e.g., "2x2x12" or "10mm"
+  specification String?
   sku           String      @unique
   price         Decimal     @db.Decimal(12, 2)
   costPrice     Decimal     @db.Decimal(12, 2) @map("cost_price")
@@ -61,10 +67,27 @@ model Product {
   categoryId    String      @map("category_id")
   category      Category    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   orderItems    OrderItem[]
+  transactions  InventoryTransaction[] // 2) Link product to stock logs
   createdAt     DateTime    @default(now()) @map("created_at")
   updatedAt     DateTime    @updatedAt @map("updated_at")
 
   @@map("inventory")
+}
+
+model InventoryTransaction {
+  id          String                   @id @default(uuid())
+  productId   String                   @map("product_id")
+  product     Product                  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type        InventoryTransactionType
+  quantity    Int                      // Signed only for ADJUSTMENT in our service rule
+  reason      String                   @db.Text
+  previousQty Int                      @map("previous_qty")
+  newQty      Int                      @map("new_qty")
+  createdBy   String?                  @map("created_by")
+  createdAt   DateTime                 @default(now()) @map("created_at")
+
+  @@index([productId, createdAt])
+  @@map("inventory_transactions")
 }
 
 model User {
