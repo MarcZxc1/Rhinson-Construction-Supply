@@ -22,15 +22,30 @@ Content-Type: application/json
 }
 
 ### Register with minimal data
-POST http://localhost:5000/api/users/register
+
+
+
+POST http://localhost:5000/api/users/login
 Content-Type: application/json
 
 {
-  "username": "testuser",
-  "email": "test@test.com",
-  "password": "Test123456"
+  "email": "marc@example.com",
+  "password": "password1234"
 }
 
+
+### Update User - Change Password
+PATCH http://localhost:5000/api/users/a41bdf94-9069-484c-a0ea-ceb54ca5fdad
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImE0MWJkZjk0LTkwNjktNDg0Yy1hMGVhLWNlYjU0Y2E1ZmRhZCIsImVtYWlsIjoidGVzdEB0ZXN0LmNvbSIsImlhdCI6MTc3MDA4OTY1NywiZXhwIjoxNzcwNjk0NDU3fQ.Sa2V4jiFDla7TM7JuFavkEzvUE-EoKbtXHw-mXCCZO8
+
+{
+  "password": "NewSecurePassword123"
+}
+
+### Delete User (Soft Delete)
+DELETE http://localhost:5000/api/users/a41bdf94-9069-484c-a0ea-ceb54ca5fdad
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImE0MWJkZjk0LTkwNjktNDg0Yy1hMGVhLWNlYjU0Y2E1ZmRhZCIsImVtYWlsIjoidGVzdEB0ZXN0LmNvbSIsImlhdCI6MTc3MDA4OTY1NywiZXhwIjoxNzcwNjk0NDU3fQ.Sa2V4jiFDla7TM7JuFavkEzvUE-EoKbtXHw-mXCCZO8
 
 ### Health check
 GET http://localhost:5000/health
