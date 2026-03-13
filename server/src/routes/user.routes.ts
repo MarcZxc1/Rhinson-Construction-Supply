@@ -28,20 +28,20 @@ router.post(
 // Protected routes
 router.get(
   "/profile",
-  authenticate, // ✅ Add authentication
+  authenticate, // Add authentication
   userController.getProfile.bind(userController),
 );
 
 router.patch(
   "/:id",
-  authenticate, // ✅ Require authentication
+  authenticate, // Require authentication
   validateRequest(updateUserSchema),
   userController.updateUser.bind(userController),
 );
 
 router.delete(
   "/:id",
-  authenticate, // ✅ Require authentication
+  authenticate, // Require authentication
   validateRequest(getUserByIdSchema),
   userController.deleteUser.bind(userController),
 );
